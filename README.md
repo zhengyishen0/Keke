@@ -160,4 +160,4 @@ Key Features:
 
 In this stage, we're going to add emotion support for Keke.
 
-Reference: [How To Create AI with Emotion](images/ai-with-emotion.md)
+Reference: [How To Create AI with Emotion](docs/ai-with-emotion.md)
