@@ -34,4 +34,4 @@ So it might look like this:
 
 ## TEST
 
-Check out the test file [here](../test_emotion.py).
+Check out the test file [here](../emotional_ai_openai.py).
