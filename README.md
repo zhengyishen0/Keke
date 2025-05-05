@@ -74,7 +74,7 @@ User
 
 <center><strong>Agent Architecture</strong></center>
 
-![Agent Architecture](docs/agent-architecture.png)
+![Agent Architecture](images/agent-architecture.png)
 
 ### Agent Orchestration
 
@@ -82,7 +82,7 @@ Smooth communication and collaboration among the team of agents and between agen
 
 <center><strong>The "Group Chat" Mode</strong></center>
 
-![The "Group Chat" Mode](docs/group_chat.png)
+![The "Group Chat" Mode](images/group_chat.png)
 
 **Servant Agent (Keke)**
 
@@ -155,3 +155,9 @@ Key Features:
 - Voice-to-text (local model)
 - Identify when to jump into conversation
 - natural language output
+
+### Stage 6: AI with Emotion
+
+In this stage, we're going to add emotion support for Keke.
+
+Reference: [How To Create AI with Emotion](images/ai-with-emotion.md)
