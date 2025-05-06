@@ -65,4 +65,6 @@ virtualenv==20.30.0
 wheel==0.45.1
 xattr==1.1.4
 zstandard==0.23.0
-langchain-community==0.3.58
+langchain-community
+google-generativeai
+requests
