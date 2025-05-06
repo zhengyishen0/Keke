@@ -15,6 +15,7 @@ except KeyError:
     # Handle the error appropriately, maybe exit or raise an exception
     exit(1) 
 
+# Note: Using 'gemini-1.5-flash-latest' as the fast, available model via the library.
 def call_llm(model_name: str = "gemini-1.5-flash-latest", system_prompt: str = "", user_prompt: str = "", temperature: float = 0.2, response_format: Dict = {"type": "text"}) -> str:
     """Calls the specified Google Gemini model."""
     model = genai.GenerativeModel(model_name)
