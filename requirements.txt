@@ -68,3 +68,4 @@ zstandard==0.23.0
 langchain-community
 google-generativeai
 requests
+litellm
