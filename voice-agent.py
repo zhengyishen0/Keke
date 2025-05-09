@@ -1,21 +1,12 @@
 import asyncio
 import random
-import numpy as np
-import sounddevice as sd
-from agents import (
-    Agent,
-    function_tool,
-    set_tracing_disabled,
-)
-from agents.voice import (
-    AudioInput,
-    SingleAgentVoiceWorkflow,
-    VoicePipeline,
-)
+from agents import Agent,function_tool
+from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
+from audio_utils import capture_audio, play_audio_stream
 from dotenv import load_dotenv
 
-# Load environment variables
+
 load_dotenv()
 
 
@@ -46,21 +37,6 @@ agent = Agent(
     tools=[get_weather],
 )
 
-def play_beep():
-    """
-    Play a beep sound.
-    """
-
-    beep = np.sin(2 * np.pi * 440 * np.arange(0, 0.5, 1/24000)).astype(np.float32)
-    sd.play(beep, 24000)
-    sd.wait()
-
-def capture_audio(duration=3):
-    play_beep()
-    with sd.InputStream(samplerate=24000, channels=1, dtype=np.int16) as stream:
-        buffer = stream.read(int(duration * 24000))[0]
-    play_beep()
-    return buffer
 
 
 async def main():
@@ -70,16 +46,9 @@ async def main():
     audio_input = AudioInput(buffer=buffer)
 
     result = await pipeline.run(audio_input)
-
-    # Create an audio player using `sounddevice`
-    player = sd.OutputStream(samplerate=24000, channels=1, dtype=np.int16)
-    player.start()
-
-    # Play the audio stream as it comes in
-    async for event in result.stream():
-        if event.type == "voice_stream_event_audio":
-            player.write(event.data)
+    await play_audio_stream(result)
 
 
 if __name__ == "__main__":
     asyncio.run(main())
+    
