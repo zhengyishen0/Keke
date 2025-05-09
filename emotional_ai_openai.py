@@ -1,8 +1,8 @@
 import json
-from dotenv import load_dotenv
 from typing import Dict, List, Any
 from openai import OpenAI
 from pydantic import BaseModel
+from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
