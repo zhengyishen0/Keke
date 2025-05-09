@@ -7,44 +7,25 @@ This document outlines the file structure and organizational schema for an Obsid
 ## Core File Structure
 
 ```
-ai-companion/
-├── config/                  # Configuration files
-│   ├── settings.json        # General app settings
-│   └── templates/           # Templates for creating new notes
-│       ├── memory.md
-│       ├── task.md
-│       ├── knowledge.md
-│       ├── person.md
-│       └── note.md          # Keep-style notes
-│
-├── vault/                   # Main content storage
-│   ├── memories/            # Conversation and interaction records
-│   │   └── [YYYY-MM-DD]-[title].md
-│   ├── tasks/               # Action items and to-dos
-│   │   └── [title].md
-│   ├── knowledge/           # Reference information and documentation
-│   │   └── [topic].md
-│   ├── relationships/       # Information about people
-│   │   └── [name].md
-│   ├── notes/               # Quick capture notes (Google Keep style)
-│   │   └── [title].md
-│   └── canvases/            # Visual relationship maps
-│       └── [title].canvas
-│
-├── indexes/                 # Search indexes and metadata
-│   ├── tags.json            # Tag index
-│   ├── links.json           # Internal links tracking
-│   ├── timeline.json        # Chronological index
-│   ├── display.json         # Display preferences for notes
+KnowledgeVault/
+├── Knowledge/             # Reference information and documentation
+│   └── [topic].md
+├── Canvases/             # Visual relationship maps
+│   └── [title].canvas
+├── Indexes/              # Search indexes and metadata
+│   ├── tags.json        # Tag index
+│   ├── links.json       # Internal links tracking
+│   ├── timeline.json    # Chronological index
+│   ├── display.json     # Display preferences for notes
 │   └── relationship-graph.json  # Relationship network data
-│
-├── integrations/            # Third-party integrations
-│   └── google/
-│       ├── calendar-sync.json  # Calendar sync configuration
-│       └── cached-events.json  # Local cache of synced events
-│
-└── plugins/                 # Optional extensions
-    └── [plugin-name]/
+├── Memories/             # Conversation and interaction records
+│   └── [YYYY-MM-DD]-[title].md
+├── Notes/                # Quick capture notes (Google Keep style)
+│   └── [title].md
+├── Relationships/        # Information about people
+│   └── [name].md
+└── Tasks/                # Action items and to-dos
+    └── [title].md
 ```
 
 ## Note Schema Definitions

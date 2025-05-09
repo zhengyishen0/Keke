@@ -1,0 +1,11 @@
+{
+  "sync_settings": {
+    "calendars": [],
+    "sync_period": {
+      "past_days": 30,
+      "future_days": 90
+    },
+    "sync_frequency": "15m",
+    "last_sync": null
+  }
+} 

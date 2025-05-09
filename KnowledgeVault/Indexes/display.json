@@ -1,0 +1,9 @@
+{
+  "display_settings": {
+    "default_view": "grid",
+    "default_sort": "modified_desc",
+    "note_previews": true,
+    "show_tags_in_preview": true
+  },
+  "note_customizations": {}
+} 
