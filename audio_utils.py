@@ -6,7 +6,8 @@ def play_beep():
     """
     Play a beep sound.
     """
-    beep = np.sin(2 * np.pi * 440 * np.arange(0, 0.5, 1/24000)).astype(np.float32)
+    beep = np.sin(2 * np.pi * 440 * np.arange(0,
+                  0.5, 1/24000)).astype(np.float32)
     sd.play(beep, 24000)
     sd.wait()
 
@@ -14,10 +15,10 @@ def play_beep():
 def capture_audio(duration=5):
     """
     Capture audio from the microphone for a specified duration.
-    
+
     Args:
         duration (int): Duration of audio capture in seconds
-        
+
     Returns:
         numpy.ndarray: Audio buffer containing the captured audio
     """
@@ -31,7 +32,7 @@ def capture_audio(duration=5):
 async def play_audio_stream(result):
     """
     Play an audio stream as it comes in.
-    
+
     Args:
         result: The result object containing the audio stream
     """
@@ -42,4 +43,4 @@ async def play_audio_stream(result):
     # Play the audio stream as it comes in
     async for event in result.stream():
         if event.type == "voice_stream_event_audio":
-            player.write(event.data) 
+            player.write(event.data)

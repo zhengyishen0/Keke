@@ -1,11 +1,10 @@
 import asyncio
 import random
-from agents import Agent,function_tool
+from agents import Agent, function_tool
 from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
 from audio_utils import capture_audio, play_audio_stream
 from dotenv import load_dotenv
-
 
 load_dotenv()
 
@@ -27,6 +26,7 @@ spanish_agent = Agent(
     model="gpt-4.1-nano",
 )
 
+
 agent = Agent(
     name="Assistant",
     instructions=prompt_with_handoff_instructions(
@@ -36,7 +36,6 @@ agent = Agent(
     handoffs=[spanish_agent],
     tools=[get_weather],
 )
-
 
 
 async def main():
@@ -51,4 +50,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-    
