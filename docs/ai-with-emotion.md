@@ -14,7 +14,7 @@ Emotions are the feelings that we experience, but why do we need them? One of th
 
 This is how these components work together:
 
-![Emotional Brain](../images/ai_emotion.png)
+![Emotional Brain](ai_emotion.png)
 
 So how do these connected to the AI?
 
@@ -30,7 +30,7 @@ I think the emotion might be at the first laryer of reaction, as it's the quicke
 
 So it might look like this:
 
-![Conscious Mind Architecture](../images/revised_consciousness.png)
+![Conscious Mind Architecture](revised_consciousness.png)
 
 ## TEST
 

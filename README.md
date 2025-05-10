@@ -74,7 +74,7 @@ User
 
 <center><strong>Agent Architecture</strong></center>
 
-![Agent Architecture](images/agent-architecture.png)
+![Agent Architecture](docs/agent-architecture.png)
 
 ### Agent Orchestration
 
@@ -82,7 +82,7 @@ Smooth communication and collaboration among the team of agents and between agen
 
 <center><strong>The "Group Chat" Mode</strong></center>
 
-![The "Group Chat" Mode](images/group_chat.png)
+![The "Group Chat" Mode](docs/group_chat.png)
 
 **Servant Agent (Keke)**
 
