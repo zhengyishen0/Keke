@@ -1,30 +1,17 @@
 import asyncio
-import random
 from agents import Agent, function_tool
-from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
-from audio_utils import capture_audio, play_audio_stream
+from agents.voice import (
+    AudioInput,
+    SingleAgentVoiceWorkflow,
+    SingleAgentWorkflowCallbacks,
+    VoicePipeline,
+)
+from audio_utils import record_audio, play_audio_stream, play_beep
+from my_workflow import MyWorkflow
 from dotenv import load_dotenv
 
 load_dotenv()
-
-
-@function_tool
-def get_weather(city: str) -> str:
-    """Get the weather for a given city."""
-    print(f"[debug] get_weather called with city: {city}")
-    choices = ["sunny", "cloudy", "rainy", "snowy"]
-    return f"The weather in {city} is {random.choice(choices)}."
-
-
-spanish_agent = Agent(
-    name="Spanish",
-    handoff_description="A spanish speaking agent.",
-    instructions=prompt_with_handoff_instructions(
-        "You're speaking to a human, so be polite and concise. Speak in Spanish.",
-    ),
-    model="gpt-4.1-nano",
-)
 
 
 agent = Agent(
@@ -33,19 +20,29 @@ agent = Agent(
         "You're speaking to a human, so be polite and concise. If the user speaks in Spanish, handoff to the spanish agent.",
     ),
     model="gpt-4.1-nano",
-    handoffs=[spanish_agent],
-    tools=[get_weather],
 )
 
 
+class WorkflowCallbacks(SingleAgentWorkflowCallbacks):
+    def on_run(self, workflow: SingleAgentVoiceWorkflow, transcription: str) -> None:
+        print(f"[debug] on_run called with transcription: {transcription}")
+
+
 async def main():
-    pipeline = VoicePipeline(workflow=SingleAgentVoiceWorkflow(agent))
+    # workflow = SingleAgentVoiceWorkflow(agent, callbacks=WorkflowCallbacks())
+    workflow = MyWorkflow(
+        agent=agent, callbacks=lambda x: print(f"Transcription: {x}"))
+    pipeline = VoicePipeline(workflow=workflow)
 
-    buffer = capture_audio()
-    audio_input = AudioInput(buffer=buffer)
+    while True:
+        try:
+            buffer = record_audio()
+            audio_input = AudioInput(buffer=buffer)
+            result = await pipeline.run(audio_input)
+            await play_audio_stream(result)
 
-    result = await pipeline.run(audio_input)
-    await play_audio_stream(result)
+        except KeyboardInterrupt:
+            break
 
 
 if __name__ == "__main__":
