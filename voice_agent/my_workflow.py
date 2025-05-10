@@ -5,34 +5,39 @@ from agents.voice import VoiceWorkflowBase, VoiceWorkflowHelper
 
 
 class MyWorkflow(VoiceWorkflowBase):
-    def __init__(self, agent: Agent, callbacks: Callable[[str], None]):
+    def __init__(self, agent: Agent, chat_history: list[TResponseInputItem], callbacks: Callable[[str], None] = None):
         """Create a new single agent voice workflow.
 
         Args:
             agent: The agent to run.
             callbacks: Optional callbacks to call during the workflow.
         """
-        self._input_history: list[TResponseInputItem] = []
         self._current_agent = agent
         self._callbacks = callbacks
+        self._chat_history = chat_history
 
     async def run(self, transcription: str) -> AsyncIterator[str]:
         if self._callbacks:
             self._callbacks(transcription)
 
         # Add the transcription to the input history
-        self._input_history.append(
+        self._chat_history.append(
             {
                 "role": "user",
                 "content": transcription,
             }
         )
+        print(transcription)
 
-        result = Runner.run_streamed(self._current_agent, self._input_history)
+        result = Runner.run_streamed(self._current_agent, self._chat_history)
 
-        # Stream the text from the result
+        # Stream and print each chunk as it arrives
         async for chunk in VoiceWorkflowHelper.stream_text_from(result):
-            yield chunk
+            if chunk:  # Only process non-empty chunks
+                print(chunk, end="", flush=True)
+                yield chunk  # Keep the yield for async iteration
+
+        response = result.final_output
 
         # Update the input history and current agent
         self._input_history = result.to_input_list()

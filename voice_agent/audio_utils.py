@@ -118,9 +118,8 @@ async def play_audio_stream(result):
         async for event in result.stream():
             if event.type == "voice_stream_event_audio":
                 player.add_audio(event.data)
-                print("Received audio")
-            elif event.type == "voice_stream_event_lifecycle":
-                print(f"Received lifecycle event: {event.event}")
+            # elif event.type == "voice_stream_event_lifecycle":
+            #     print(f"Received lifecycle event: {event.event}")
 
         # Add 1 second of silence to the end of the stream to avoid cutting off the last audio
         player.add_audio(np.zeros(24000 * 1, dtype=np.int16))
