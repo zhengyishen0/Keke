@@ -3,7 +3,7 @@ from agents import Agent, Runner, TResponseInputItem
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
 from agents.voice import AudioInput, VoicePipeline
 from voice_agent.audio_utils import record_audio, play_audio_stream
-from voice_agent.my_workflow import MyWorkflow
+from voice_agent.voice_workflow import VoiceWorkflow
 from dotenv import load_dotenv
 
 load_dotenv()
@@ -33,7 +33,7 @@ class UnifiedAgent:
 
     async def handle_voice_input(self):
         """Handle voice input with audio response"""
-        workflow = MyWorkflow(self.agent, self.chat_history)
+        workflow = VoiceWorkflow(self.agent, self.chat_history)
         pipeline = VoicePipeline(workflow=workflow)
 
         buffer = record_audio()
@@ -45,25 +45,19 @@ class UnifiedAgent:
 async def main():
     agent = UnifiedAgent()
 
+    print("\nWelcome! Type your message and press Enter to send.")
+    print("Type '<>' to start voice recording.")
+    print("Type 'exit' to quit.")
+
     while True:
-
-        print("\nChoose input mode:")
-        print("1. Text input")
-        print("2. Voice input")
-        print("3. Exit")
-
-        choice = input("Enter your choice (1-3): ")
-
-        if choice == "1":
-            text = input("Enter your text: ")
-            await agent.handle_text_input(text)
-        elif choice == "2":
+        text = input("> ")
+        if text.lower() == 'exit':
+            break
+        elif text.strip() == '<>':
             print("Recording... Press Ctrl+C to stop")
             await agent.handle_voice_input()
-        elif choice == "3":
-            break
-        else:
-            print("Invalid choice. Please try again.")
+        elif text.strip():  # Only process non-empty input
+            await agent.handle_text_input(text)
 
 
 if __name__ == "__main__":

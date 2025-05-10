@@ -53,11 +53,11 @@ def _record_audio(screen: curses.window) -> npt.NDArray[np.float32]:
     screen.nodelay(True)  # Non-blocking input
     screen.clear()
     screen.addstr(
-        "Press <spacebar> to start recording. Press <spacebar> again to stop recording.\n"
+        "Recording started. Press <Enter> to stop recording.\n"
     )
     screen.refresh()
 
-    recording = False
+    recording = True
     audio_buffer: list[npt.NDArray[np.float32]] = []
 
     def _audio_callback(indata, frames, time_info, status):
@@ -71,14 +71,11 @@ def _record_audio(screen: curses.window) -> npt.NDArray[np.float32]:
     with sd.InputStream(samplerate=24000, channels=1, dtype=np.float32, callback=_audio_callback):
         while True:
             key = screen.getch()
-            if key == ord(" "):
-                recording = not recording
-                if recording:
-                    screen.addstr("Recording started...\n")
-                else:
-                    screen.addstr("Recording stopped.\n")
-                    break
+            if key == ord('\n'):  # Enter key
+                recording = False
+                screen.addstr("Recording stopped.\n")
                 screen.refresh()
+                break
             time.sleep(0.01)
 
     # Combine recorded audio chunks.

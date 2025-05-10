@@ -1,38 +1,47 @@
 import asyncio
 from agents import Agent, function_tool
-from agents.voice import AudioInput, SingleAgentVoiceWorkflow, VoicePipeline
 from agents.extensions.handoff_prompt import prompt_with_handoff_instructions
-from audio_utils import capture_audio, play_audio_stream
+from agents.voice import (
+    AudioInput,
+    SingleAgentVoiceWorkflow,
+    SingleAgentWorkflowCallbacks,
+    VoicePipeline,
+)
+from audio_utils import record_audio, play_audio_stream, play_beep
+from voice_agent.voice_workflow import VoiceWorkflow
 from dotenv import load_dotenv
 
 load_dotenv()
 
 
-# def is_goodbye(response: str) -> bool:
-#     """Identify the response as a goodbye message."""
-#     return any(word in response.lower() for word in ["goodbye", "bye", "see you later"])
-
-
 agent = Agent(
     name="Assistant",
+    instructions=prompt_with_handoff_instructions(
+        "You're speaking to a human, so be polite and concise. If the user speaks in Spanish, handoff to the spanish agent.",
+    ),
     model="gpt-4.1-nano",
 )
 
 
+class WorkflowCallbacks(SingleAgentWorkflowCallbacks):
+    def on_run(self, workflow: SingleAgentVoiceWorkflow, transcription: str) -> None:
+        print(f"[debug] on_run called with transcription: {transcription}")
+
+
 async def main():
-    workflow = SingleAgentVoiceWorkflow(agent)
+    # workflow = SingleAgentVoiceWorkflow(agent, callbacks=WorkflowCallbacks())
+    workflow = VoiceWorkflow(
+        agent=agent, callbacks=lambda x: print(f"Transcription: {x}"))
     pipeline = VoicePipeline(workflow=workflow)
 
     while True:
         try:
-            buffer = capture_audio()
+            buffer = record_audio()
             audio_input = AudioInput(buffer=buffer)
-
             result = await pipeline.run(audio_input)
             await play_audio_stream(result)
 
         except KeyboardInterrupt:
-            print("\nGoodbye!")
             break
 
 

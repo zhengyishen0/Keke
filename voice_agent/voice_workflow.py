@@ -4,7 +4,7 @@ from agents import Agent, Runner, TResponseInputItem
 from agents.voice import VoiceWorkflowBase, VoiceWorkflowHelper
 
 
-class MyWorkflow(VoiceWorkflowBase):
+class VoiceWorkflow(VoiceWorkflowBase):
     def __init__(self, agent: Agent, chat_history: list[TResponseInputItem], callbacks: Callable[[str], None] = None):
         """Create a new single agent voice workflow.
 
@@ -36,6 +36,8 @@ class MyWorkflow(VoiceWorkflowBase):
             if chunk:  # Only process non-empty chunks
                 print(chunk, end="", flush=True)
                 yield chunk  # Keep the yield for async iteration
+
+        print()
 
         response = result.final_output
 

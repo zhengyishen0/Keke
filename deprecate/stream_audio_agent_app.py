@@ -17,7 +17,7 @@ from agents.voice import StreamedAudioInput, VoicePipeline
 # Import MyWorkflow class - handle both module and package use cases
 if TYPE_CHECKING:
     # For type checking, use the relative import
-    from .my_workflow import MyWorkflow
+    from ..voice_agent.voice_workflow import VoiceWorkflow
 else:
     # At runtime, try both import styles
     try:
@@ -127,7 +127,7 @@ class RealtimeApp(App[None]):
         self.should_send_audio = asyncio.Event()
         self.connected = asyncio.Event()
         self.pipeline = VoicePipeline(
-            workflow=MyWorkflow(on_start=self._on_transcription))
+            workflow=VoiceWorkflow(on_start=self._on_transcription))
         self._audio_input = StreamedAudioInput()
         self.audio_player = sd.OutputStream(
             samplerate=SAMPLE_RATE,
