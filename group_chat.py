@@ -4,36 +4,17 @@ import re
 import datetime
 import time
 import asyncio
-from pydantic import BaseModel, Field
-
 from agents import Agent, ItemHelpers, MessageOutputItem, Runner, trace, function_tool
 from base_agent import BaseAgent
+from models import MessageRecord
+from pprint import pprint
 
+SERVANT_INSTRUCTIONS = """
+You are a helpful agent that will help the human with anything he needs. You will communiates with the human and other agents via a group chat. So if you want to send the message to human, you should use '@human' to mention the human so the group chat will forward the message to the human. If you want to send the message to other agents you can use '@agent_name' to mention a specific agents. You can also mention all agents using '@all' or the system (which has the ability to reminder you a task later) using '@system'.
+"""
 
-class MessageRecord(BaseModel):
-    """A message record in the group chat.
-
-    Attributes:
-        sender: The ID of the message sender
-        message: The content of the message
-        timestamp: When the message was sent
-        receivers: List of agent IDs mentioned in the message
-        readers: List of agent IDs that have read the message
-    """
-    sender: str
-    message: str
-    timestamp: datetime.datetime = Field(default_factory=datetime.datetime.now)
-    receivers: List[str] = Field(default_factory=list)
-    readers: List[str] = Field(default_factory=list)
-
-    class Config:
-        arbitrary_types_allowed = True
-
-
-agent_instructions = [{"name": "Driver", "instructions": "You are an expert driver that can drive a car."},
-                      {"name": "Researcher", "instructions": "You are an expert researcher that can find information about a given topic."},
-                      {"name": "Coder", "instructions": "You are an expert coder that can code a given task."},
-                      {"name": "Tester", "instructions": "You are an expert tester that can test a given task."}]
+agent_instructions = [
+    {"name": "servant", "instructions": SERVANT_INSTRUCTIONS}]
 
 
 class Reminder:
@@ -65,38 +46,49 @@ class Reminder:
 class GroupChat:
     def __init__(self, name: str):
         self.name = name
-        self.agents: Dict[str, BaseAgent | None] = [
-            {"system": None},
-            {"human": None},
-            {"all": None}]  # initializes with a default "all" and "human" agent
+        self.agents: Dict[str, BaseAgent | None] = {
+            "system": None,
+            "human": None,
+            "all": None
+        }  # initializes with a default "all" and "human" agent
         self.chat_history = []
         self.reminders: List[Reminder] = []
         self.reminder_thread = None
         self.running = False
+        self.chat_logging = False
 
+    def enable_chat_logging(self, enable: bool):
+        """Enable or disable logging of chat messages to console.
+
+        Args:
+            enable: If True, chat messages will be printed to console. If False, messages will be silent.
+        """
+        self.chat_logging = enable
+
+    # manage agents
     def add_agent(self, agent: BaseAgent) -> str:
         """Add an agent to the group chat."""
         # Generate a unique agent ID if none provided
-        agent_id = f"{agent.name}_{len(self.agents)}"
-        self.agents[agent_id] = agent
-        self.send_to_chat(
-            "all", f"System: {agent_id} has joined the chat. @all")
-        return agent_id
+        self.agents[agent.name] = agent
+        self._send_to_chat(
+            "all", f"System: {agent.name} has joined the chat. @all")
+        return agent.name
 
     def remove_agent(self, agent_id: str) -> bool:
         """Remove an agent from the group chat."""
         if agent_id in self.agents:
             del self.agents[agent_id]
-            self.send_to_chat(
+            self._send_to_chat(
                 "all", f"System: {agent_id} has left the chat. @all")
             return True
 
+    # manage messages
     def _parse_mentions(self, message: str) -> List[str]:
         """Extract @mentions from the message."""
         pattern = r'@(\w+)'
         return re.findall(pattern, message)
 
-    def send_to_chat(self, sender_id: str, message: str) -> bool:
+    def _send_to_chat(self, sender_id: str, message: str) -> bool:
         """Send a message to the group chat. The message must contains at least one @mention
 
         Args:
@@ -109,7 +101,6 @@ class GroupChat:
 
         # Ensure the message contains at least one @mention
         receivers = self._parse_mentions(message)
-        print(f"Receivers: {receivers}")
         if receivers:
             # Store message in chat history
             message_record: MessageRecord = MessageRecord(
@@ -119,14 +110,22 @@ class GroupChat:
                 readers=[]
             )
             self.chat_history.append(message_record)
+            if self.chat_logging:
+                print(
+                    f"[LOG] From {message_record.sender} to {message_record.receivers}: {message_record.message}")
             return True
         else:
             return False
 
     def _send_to_human(self, message_records: List[MessageRecord]):
         """Parse the messages records and send the message to the human."""
-        # TODO: Implement the logic to send the message to the human.
-        pass
+        for message_record in message_records:
+            message = message_record.message.replace("@human", "")
+            print(message)
+
+    def human_input(self, text: str):
+        """Send the message from the human to the group chat. Wrap the message with @servant to mention the servant agent."""
+        self._send_to_chat("human", f"@servant {text}")
 
     def _send_to_system(self, message_records: List[MessageRecord]):
         """
@@ -134,6 +133,10 @@ class GroupChat:
         """
         # TODO: Implement the logic to send the message to the system.
         pass
+
+    def _read_message_records(self, agent_id: str, message_records: List[MessageRecord]):
+        for message_record in message_records:
+            message_record.readers.append(agent_id)
 
     async def _send_to_agent(self, agent_id: str, message_records: List[MessageRecord]):
         """Send all the unread messages that mention the agent to the agent.
@@ -147,20 +150,29 @@ class GroupChat:
             for agent_id in self.agents:
                 asyncio.create_task(self._send_to_agent(
                     agent_id, message_records))
+                self._read_message_records(agent_id, message_records)
         elif agent_id == "system":
-            pass
+            self._read_message_records(agent_id, message_records)
         elif agent_id == "human":
             self._send_to_human(message_records)
+            self._read_message_records(agent_id, message_records)
         else:  # send to the specific agent
             agent = self.agents.get(agent_id)
             if agent:
                 try:
-                    message = await agent.handle_text_input(message_records=message_records)
-                    self.send_to_chat(agent_id, message)
+                    # print("\nsend to agent")
+                    # pprint(message_records)
+
+                    message = await agent.run(message_records=message_records)
+                    self._read_message_records(agent_id, message_records)
+                    self._send_to_chat(agent_id, message)
+
+                    print()
                 except Exception as e:
                     print(f"Error sending message to {agent_id}: {e}")
                     return None
 
+    # manage reminders
     def add_time_reminder(self, agent_id: str, message: str, trigger_time: datetime.datetime) -> str:
         """Add a time-based reminder."""
         reminder = Reminder(
@@ -202,7 +214,7 @@ class GroupChat:
                     reminder_message = f"REMINDER for @{reminder.agent_id}: {reminder.message}"
 
                     # Send the reminder
-                    asyncio.run(self.send_to_chat(
+                    asyncio.run(self._send_to_chat(
                         "Reminder_System", reminder_message))
 
                     # Mark for removal if time-based (one-time)
@@ -216,6 +228,38 @@ class GroupChat:
             # Sleep for a short period before checking again
             time.sleep(1)
 
+    def _check_unread_messages(self, agent_id: str):
+        """Check if the agent has unread messages."""
+        unread_messages = [
+            msg for msg in self.chat_history
+            if agent_id in msg.receivers and agent_id not in msg.readers
+        ]
+        return unread_messages
+
+    async def _check_idle_agents(self):
+        """Continuously scan for idle agents and send them unread messages."""
+        while self.running:
+            for agent_id, agent in self.agents.items():
+                # Skip system and all agents
+                if agent_id in ["system", "all"]:
+                    continue
+
+                if agent_id == "human":
+                    unread_messages = self._check_unread_messages(agent_id)
+                    self._send_to_human(unread_messages)
+
+                # Check if agent is idle (not currently processing messages)
+                if agent and not agent.is_processing:
+                    # Find unread messages that mention this agent
+                    unread_messages = self._check_unread_messages(agent_id)
+
+                    if unread_messages:
+                        await self._send_to_agent(agent_id, unread_messages)
+
+            # Sleep for a short period before checking again
+            await asyncio.sleep(1)
+
+    # start and stop the group chat
     def start(self):
         """Start the group chat service."""
         if not self.running:
@@ -225,6 +269,9 @@ class GroupChat:
             self.reminder_thread.daemon = True
             self.reminder_thread.start()
 
+            # Start the idle agent checking process
+            asyncio.create_task(self._check_idle_agents())
+
     def stop(self):
         """Stop the group chat service."""
         self.running = False
@@ -232,15 +279,11 @@ class GroupChat:
             self.reminder_thread.join(timeout=2)
 
 
-# Example usage
-async def example_usage():
-    # Create a group chat
+async def main():
     chat = GroupChat("AI Collaboration Room")
-
-    # Start the chat service
+    chat.enable_chat_logging(True)
     chat.start()
 
-    # Add agents
     for agent_instruction in agent_instructions:
         chat.add_agent(BaseAgent(
             name=agent_instruction["name"],
@@ -248,35 +291,38 @@ async def example_usage():
         ))
 
     # Send a message
-    await chat.send_to_chat("human", "Hey @researcher, can you find information about reinforcement learning?")
+    questions = [
+        "What is the largest country in South America?",
+        "What is the capital of that country?",
+        "what's the most famous sightseeing spot in that city?",
+    ]
+    for text in questions:
+        chat.human_input(text)
+        await asyncio.sleep(2)
 
-    # Add a time-based reminder
-    tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
-    reminder_id = chat.add_time_reminder(
-        "researcher",
-        "Follow up on reinforcement learning research",
-        tomorrow
-    )
-
-    # Add a conditional reminder
-    def code_completed_condition():
-        # This would check some external condition
-        # For example, checking if a file exists or a task is marked as done
-        return False  # Replace with actual condition
-
-    chat.add_conditional_reminder(
-        "tester",
-        "The code is ready for testing now",
-        code_completed_condition
-    )
-
-    # In a real app, you would keep the service running
-    # For this example, we'll just sleep briefly
-    await asyncio.sleep(5)
-
-    # Stop the service
+    await asyncio.sleep(3)
     chat.stop()
 
-# Run the example
+
 if __name__ == "__main__":
-    asyncio.run(example_usage())
+    asyncio.run(main())
+
+    # # Add a time-based reminder
+    # tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
+    # reminder_id = chat.add_time_reminder(
+    #     "researcher",
+    #     "Follow up on reinforcement learning research",
+    #     tomorrow
+    # )
+
+    # # Add a conditional reminder
+    # def code_completed_condition():
+    #     # This would check some external condition
+    #     # For example, checking if a file exists or a task is marked as done
+    #     return False  # Replace with actual condition
+
+    # chat.add_conditional_reminder(
+    #     "tester",
+    #     "The code is ready for testing now",
+    #     code_completed_condition
+    # )
