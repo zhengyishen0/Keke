@@ -7,8 +7,8 @@ from agents.voice import (
     SingleAgentWorkflowCallbacks,
     VoicePipeline,
 )
-from audio_utils import record_audio, play_audio_stream, play_beep
-from voice_agent.voice_workflow import VoiceWorkflow
+from utils.audio_utils import record_audio, play_audio_stream, play_beep
+from voice_workflow import VoiceWorkflow
 from dotenv import load_dotenv
 
 load_dotenv()
