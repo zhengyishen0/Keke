@@ -7,7 +7,7 @@ load_dotenv()
 
 
 class BaseAgent(Agent):
-    def __init__(self, name: str, instructions: str, model: str = "gpt-4o-mini"):
+    def __init__(self, name: str, instructions: str, model: str = "gpt-4o-mini", output_type: type = None):
         """
         A base agent class that can be used to create other agents. It has built in chat history and methods for running and streaming.
         """
@@ -15,6 +15,7 @@ class BaseAgent(Agent):
             name=name,
             instructions=instructions,
             model=model,
+            output_type=output_type
         )
 
         self.chat_history: list[TResponseInputItem] = []

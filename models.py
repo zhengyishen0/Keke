@@ -15,7 +15,7 @@ class MessageRecord(BaseModel):
     """
     sender: str
     message: str
-    timestamp: datetime = Field(default_factory=datetime.now)
+    timestamp: str = Field(default_factory=lambda: datetime.now().isoformat())
     receivers: List[str] = Field(default_factory=list)
     readers: List[str] = Field(default_factory=list)
 
