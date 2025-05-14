@@ -10,7 +10,14 @@ from models import MessageRecord
 from pprint import pprint
 
 SERVANT_INSTRUCTIONS = """
-You are a helpful agent that will help the human with anything he needs. You will communiates with the human and other agents via a group chat. So if you want to send the message to human, you should use '@human' to mention the human so the group chat will forward the message to the human. If you want to send the message to other agents you can use '@agent_name' to mention a specific agents. You can also mention all agents using '@all' or the system (which has the ability to reminder you a task later) using '@system'.
+You are a helpful agent that will collaborate with human and other agents in a group chat. 
+Whenever you reply, you MUST use "@" to mention a receiver of the message. By default, you will reply to a human so you should use '@human'.
+If you want to send the message to other agents you can use '@agent_name' to mention a specific agents. 
+You can mention all agents using '@all', 
+You can also mention the system (which has the ability to reminder you a task later) using '@system'.
+
+There are only four options for the receiver: '@human', '@all', '@agent_name', '@system'.
+The agent_name is default to none unless it is specified to you.
 """
 
 agent_instructions = [
@@ -98,7 +105,6 @@ class GroupChat:
         Returns:
             True if the message was sent successfully, False otherwise
         """
-
         # Ensure the message contains at least one @mention
         receivers = self._parse_mentions(message)
         if receivers:
@@ -119,9 +125,14 @@ class GroupChat:
 
     def _send_to_human(self, message_records: List[MessageRecord]):
         """Parse the messages records and send the message to the human."""
+        # Clear the prompt by printing a newline and backspace
+        print("\r", end="", flush=True)
         for message_record in message_records:
-            message = message_record.message.replace("@human", "")
-            print(message)
+            message = message_record.message.replace("@human", "").strip()
+            print(message)  # Print message without newline before
+        self._read_message_records("human", message_records)
+        # Restore the prompt
+        print("> ", end="", flush=True)
 
     def human_input(self, text: str):
         """Send the message from the human to the group chat. Wrap the message with @servant to mention the servant agent."""
@@ -151,21 +162,13 @@ class GroupChat:
                 asyncio.create_task(self._send_to_agent(
                     agent_id, message_records))
                 self._read_message_records(agent_id, message_records)
-        elif agent_id == "system":
-            self._read_message_records(agent_id, message_records)
-        elif agent_id == "human":
-            self._send_to_human(message_records)
-            self._read_message_records(agent_id, message_records)
         else:  # send to the specific agent
             agent = self.agents.get(agent_id)
             if agent:
                 try:
-                    # print("\nsend to agent")
-                    # pprint(message_records)
-
                     message = await agent.run(message_records=message_records)
-                    self._read_message_records(agent_id, message_records)
                     self._send_to_chat(agent_id, message)
+                    self._read_message_records(agent_id, message_records)
 
                     print()
                 except Exception as e:
@@ -244,26 +247,69 @@ class GroupChat:
                 if agent_id in ["system", "all"]:
                     continue
 
+                # Check unread messages for human
                 if agent_id == "human":
                     unread_messages = self._check_unread_messages(agent_id)
-                    self._send_to_human(unread_messages)
+                    if unread_messages:
+                        self._send_to_human(unread_messages)
 
                 # Check if agent is idle (not currently processing messages)
                 if agent and not agent.is_processing:
-                    # Find unread messages that mention this agent
                     unread_messages = self._check_unread_messages(agent_id)
-
                     if unread_messages:
                         await self._send_to_agent(agent_id, unread_messages)
 
             # Sleep for a short period before checking again
             await asyncio.sleep(1)
 
+    async def handle_human_input(self):
+        """Handle continuous human input in an asynchronous way."""
+        print("\nWelcome to the AI Collaboration Room! Type your messages and press Enter to send.")
+        print("Type 'CHAT' to print the chat history.")
+        print("Type 'LOG' to toggle logging.")
+        print("Type 'EXIT' to quit the chat.\n")
+        print("> ", end="", flush=True)  # Initial prompt
+
+        while True:
+            try:
+                # Get input from user using asyncio.get_event_loop().run_in_executor
+                loop = asyncio.get_event_loop()
+                user_input = await loop.run_in_executor(None, lambda: input().strip())
+
+                if user_input == "CHAT":
+                    pprint(self.chat_history)
+                    # Restore prompt after chat history
+                    print("> ", end="", flush=True)
+                    continue
+                elif user_input == "LOG":
+                    self.enable_chat_logging(not self.chat_logging)
+                    print(
+                        f"Logging {'enabled' if self.chat_logging else 'disabled'}")
+                    # Restore prompt after logging message
+                    print("> ", end="", flush=True)
+                    continue
+
+                # Check if user wants to exit
+                elif user_input == 'EXIT':
+                    return True
+                else:
+                    # Send the message to the chat
+                    self.human_input(user_input)
+                    # Note: prompt is restored in _send_to_human after agent response
+
+            except KeyboardInterrupt:
+                return True
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                print("> ", end="", flush=True)  # Restore prompt after error
+                return False
+
     # start and stop the group chat
     def start(self):
         """Start the group chat service."""
         if not self.running:
             self.running = True
+
             self.reminder_thread = threading.Thread(
                 target=self._check_reminders)
             self.reminder_thread.daemon = True
@@ -290,18 +336,14 @@ async def main():
             instructions=agent_instruction["instructions"]
         ))
 
-    # Send a message
-    questions = [
-        "What is the largest country in South America?",
-        "What is the capital of that country?",
-        "what's the most famous sightseeing spot in that city?",
-    ]
-    for text in questions:
-        chat.human_input(text)
-        await asyncio.sleep(2)
+    # Create task for handling human input
+    input_task = asyncio.create_task(chat.handle_human_input())
 
-    await asyncio.sleep(3)
-    chat.stop()
+    try:
+        # Wait for the input task to complete (when user types 'exit')
+        should_exit = await input_task
+    finally:
+        chat.stop()
 
 
 if __name__ == "__main__":
