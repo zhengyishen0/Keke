@@ -1,13 +1,10 @@
-import threading
-from typing import List, Dict, Callable, Union, Optional
+from typing import List, Dict
 import re
-import datetime
-import time
 import asyncio
-from agents import Agent, ItemHelpers, MessageOutputItem, Runner, trace, function_tool
+from pprint import pprint
 from base_agent import BaseAgent
 from models import MessageRecord
-from pprint import pprint
+from reminder import ReminderManager
 
 SERVANT_INSTRUCTIONS = """
 You are a helpful agent that will collaborate with human and other agents in a group chat. 
@@ -23,31 +20,7 @@ The agent_name is default to none unless it is specified to you.
 agent_instructions = [
     {"name": "servant", "instructions": SERVANT_INSTRUCTIONS}]
 
-
-class Reminder:
-    def __init__(self,
-                 agent_id: str,
-                 message: str,
-                 trigger_type: str,
-                 trigger_value: Union[datetime.datetime, Callable],
-                 reminder_id: Optional[str] = None):
-        self.agent_id = agent_id
-        self.message = message
-        self.trigger_type = trigger_type  # "time" or "condition"
-        self.trigger_value = trigger_value
-        self.reminder_id = reminder_id or f"reminder_{int(time.time())}_{agent_id}"
-        self.is_active = True
-
-    def should_trigger(self) -> bool:
-        if not self.is_active:
-            return False
-
-        if self.trigger_type == "time":
-            return datetime.datetime.now() >= self.trigger_value
-        elif self.trigger_type == "condition":
-            # For condition-based reminders, trigger_value is a callable that returns True/False
-            return self.trigger_value()
-        return False
+# TODO: add output structure
 
 
 class GroupChat:
@@ -59,8 +32,7 @@ class GroupChat:
             "all": None
         }  # initializes with a default "all" and "human" agent
         self.chat_history = []
-        self.reminders: List[Reminder] = []
-        self.reminder_thread = None
+        self.reminder_manager = ReminderManager()
         self.running = False
         self.chat_logging = False
 
@@ -175,62 +147,6 @@ class GroupChat:
                     print(f"Error sending message to {agent_id}: {e}")
                     return None
 
-    # manage reminders
-    def add_time_reminder(self, agent_id: str, message: str, trigger_time: datetime.datetime) -> str:
-        """Add a time-based reminder."""
-        reminder = Reminder(
-            agent_id=agent_id,
-            message=message,
-            trigger_type="time",
-            trigger_value=trigger_time
-        )
-        self.reminders.append(reminder)
-        return reminder.reminder_id
-
-    def add_conditional_reminder(self, agent_id: str, message: str, condition: Callable) -> str:
-        """Add a condition-based reminder."""
-        reminder = Reminder(
-            agent_id=agent_id,
-            message=message,
-            trigger_type="condition",
-            trigger_value=condition
-        )
-        self.reminders.append(reminder)
-        return reminder.reminder_id
-
-    def cancel_reminder(self, reminder_id: str) -> bool:
-        """Cancel a reminder by ID."""
-        for reminder in self.reminders:
-            if reminder.reminder_id == reminder_id:
-                reminder.is_active = False
-                return True
-        return False
-
-    def _check_reminders(self):
-        """Check if any reminders should be triggered."""
-        while self.running:
-            triggered_reminders = []
-
-            for reminder in self.reminders:
-                if reminder.should_trigger():
-                    # Prepare the reminder message with @mention
-                    reminder_message = f"REMINDER for @{reminder.agent_id}: {reminder.message}"
-
-                    # Send the reminder
-                    asyncio.run(self._send_to_chat(
-                        "Reminder_System", reminder_message))
-
-                    # Mark for removal if time-based (one-time)
-                    if reminder.trigger_type == "time":
-                        triggered_reminders.append(reminder)
-
-            # Remove triggered time-based reminders
-            for reminder in triggered_reminders:
-                self.reminders.remove(reminder)
-
-            # Sleep for a short period before checking again
-            time.sleep(1)
-
     def _check_unread_messages(self, agent_id: str):
         """Check if the agent has unread messages."""
         unread_messages = [
@@ -310,10 +226,11 @@ class GroupChat:
         if not self.running:
             self.running = True
 
-            self.reminder_thread = threading.Thread(
-                target=self._check_reminders)
-            self.reminder_thread.daemon = True
-            self.reminder_thread.start()
+            # Start the reminder manager with a callback to send messages
+            self.reminder_manager.start(
+                lambda message: asyncio.run(
+                    self._send_to_chat("system", message))
+            )
 
             # Start the idle agent checking process
             asyncio.create_task(self._check_idle_agents())
@@ -321,8 +238,7 @@ class GroupChat:
     def stop(self):
         """Stop the group chat service."""
         self.running = False
-        if self.reminder_thread:
-            self.reminder_thread.join(timeout=2)
+        self.reminder_manager.stop()
 
 
 async def main():
@@ -348,23 +264,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
-    # # Add a time-based reminder
-    # tomorrow = datetime.datetime.now() + datetime.timedelta(days=1)
-    # reminder_id = chat.add_time_reminder(
-    #     "researcher",
-    #     "Follow up on reinforcement learning research",
-    #     tomorrow
-    # )
-
-    # # Add a conditional reminder
-    # def code_completed_condition():
-    #     # This would check some external condition
-    #     # For example, checking if a file exists or a task is marked as done
-    #     return False  # Replace with actual condition
-
-    # chat.add_conditional_reminder(
-    #     "tester",
-    #     "The code is ready for testing now",
-    #     code_completed_condition
-    # )
