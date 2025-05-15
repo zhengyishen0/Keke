@@ -4,22 +4,7 @@ import asyncio
 from pprint import pprint
 from base_agent import BaseAgent
 from models import MessageRecord
-from reminder import ReminderManager
-import datetime
-
-SYSTEM_INSTRUCTIONS = """
-You are a helpful agent that will collaborate with human and other agents in a group chat.
-Whenever you reply, specify the receiver of the message in the message record.
-
-output_type: MessageRecord
-sender: str = "system"
-message: str = "the message content"
-receivers: List[str] = receiver_names (you can chose from "human" or "specific_agent_name")
-
-"""
-
-agent_instructions = [
-    {"name": "system", "instructions": SYSTEM_INSTRUCTIONS, "output_type": MessageRecord}]
+from agent_instructions import agent_instructions
 
 
 class GroupChat:
@@ -27,7 +12,6 @@ class GroupChat:
         self.name = name
         self.agents: Dict[str, BaseAgent] = {}
         self.chat_history = []
-        self.reminder_manager = ReminderManager()
         self.running = False
         self.chat_logging = False
 
@@ -143,34 +127,32 @@ class GroupChat:
                     print(f"Error sending message to {agent_id}: {e}")
                     return None
 
-    def _check_unread_messages(self, agent_id: str):
+    def _find_unread_messages(self, agent_id: str) -> List[MessageRecord]:
         """Check if the agent has unread messages."""
-        unread_messages = [
+        unread_messages: List[MessageRecord] = [
             msg for msg in self.chat_history
             if agent_id in msg.receivers and agent_id not in msg.readers
         ]
         return unread_messages
 
-    async def _check_idle_agents(self):
+    async def _check_unread_messages(self):
         """Continuously scan for idle agents and send them unread messages."""
         while self.running:
+
+            # TODO: change it from continuously checking to only when the human sends a message
+            unread_messages = self._find_unread_messages("human")
+            if unread_messages:
+                self._send_to_human(unread_messages)
+            await asyncio.sleep(1)
+
             for agent_id, agent in self.agents.items():
                 # Check if agent is idle (not currently processing messages)
                 if agent and not agent.is_processing:
-                    unread_messages = self._check_unread_messages(agent_id)
+                    unread_messages = self._find_unread_messages(agent_id)
                     if unread_messages:
                         await self._send_to_agent(agent_id, unread_messages)
 
             # Sleep for a short period before checking again
-            await asyncio.sleep(1)
-
-    async def _check_human_messages(self):
-        """Check if the human has unread messages."""
-        # TODO: change it from continuously checking to only when the human sends a message
-        while self.running:
-            unread_messages = self._check_unread_messages("human")
-            if unread_messages:
-                self._send_to_human(unread_messages)
             await asyncio.sleep(1)
 
     async def handle_human_input(self):
@@ -223,15 +205,7 @@ class GroupChat:
         """Start the group chat service."""
         if not self.running:
             self.running = True
-
-            # Start the reminder manager with a callback to send messages
-            self.reminder_manager.start(
-                lambda message: asyncio.run(
-                    self._send_to_chat("system", message))
-            )
-
-            asyncio.create_task(self._check_idle_agents())
-            asyncio.create_task(self._check_human_messages())
+            asyncio.create_task(self._check_unread_messages())
             self.should_stop = asyncio.create_task(self.handle_human_input())
 
     def stop(self):

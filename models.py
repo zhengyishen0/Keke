@@ -10,7 +10,7 @@ class MessageRecord(BaseModel):
         sender: The ID of the message sender
         message: The content of the message
         timestamp: When the message was sent
-        receivers: List of agent IDs mentioned in the message
+        receivers: List of agent IDs mentioned in the message, must be "human" or "system" or a valid agent ID
         readers: List of agent IDs that have read the message
     """
     sender: str

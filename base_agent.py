@@ -1,13 +1,14 @@
 import asyncio
-from agents import Agent, Runner, TResponseInputItem
+from agents import Agent, Runner, TResponseInputItem, Tool
 from models import MessageRecord
 from dotenv import load_dotenv
+from typing import List, Callable, Optional
 
 load_dotenv()
 
 
 class BaseAgent(Agent):
-    def __init__(self, name: str, instructions: str, model: str = "gpt-4o-mini", output_type: type = None):
+    def __init__(self, name: str, instructions: str, model: str = "gpt-4o-mini", output_type: type = None, tools: List[Tool] = []):
         """
         A base agent class that can be used to create other agents. It has built in chat history and methods for running and streaming.
         """
@@ -15,7 +16,8 @@ class BaseAgent(Agent):
             name=name,
             instructions=instructions,
             model=model,
-            output_type=output_type
+            output_type=output_type,
+            tools=tools
         )
 
         self.chat_history: list[TResponseInputItem] = []

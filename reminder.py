@@ -2,6 +2,7 @@ import datetime
 import time
 import threading
 from typing import Callable, Union, Optional
+from agents import function_tool
 
 
 class Reminder:
@@ -36,8 +37,18 @@ class ReminderManager:
         self.running = False
         self.reminder_thread = None
 
+    @function_tool
     def add_time_reminder(self, agent_id: str, message: str, trigger_time: datetime.datetime) -> str:
-        """Add a time-based reminder."""
+        """Add a time-based reminder.
+
+        Args:
+            agent_id: The ID of the agent to send the reminder to
+            message: The message to send to the agent
+            trigger_time: The time to trigger the reminder in ISO format (YYYY-MM-DDTHH:MM:SS)
+
+        Returns:
+            The ID of the created reminder
+        """
         reminder = Reminder(
             agent_id=agent_id,
             message=message,
@@ -45,6 +56,8 @@ class ReminderManager:
             trigger_value=trigger_time
         )
         self.reminders.append(reminder)
+        print(
+            f"Reminder added: {reminder.reminder_id}, {reminder.message}, {reminder.trigger_type}, {reminder.trigger_value}")
         return reminder.reminder_id
 
     def add_conditional_reminder(self, agent_id: str, message: str, condition: Callable) -> str:
