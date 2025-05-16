@@ -1,26 +1,7 @@
 # Reminders
 
-This file contains all your reminders.
-
----
-
-## R002: tttkkk
-**Status:** COMPLETED
-**Due:** 2025-05-16 00:07
-
----
-## R002: test-r
-**Status:** COMPLETED
-**Due:** 2025-05-16 10:21
-
----
-## R003: reminder
-**Status:** COMPLETED
-**Due:** 2015-11-11 10:13
-
----
-## R004: xxxx
-**Status:** PENDING
-**Due:** 2025-05-16 10:33
-
----
+- [ ] | e0da07af05 | test reminder | 2025-05-16 21:17 | triggered | | | | | | | xx
+- [ ] | 388f61a164 | tesdxx | 2025-05-16 21:19 | triggered | | | | | | | xx
+- [ ] | d33e0b8ac9 | new | 2025-05-16 21:17 | triggered | | | | | | | none
+- [ ] | 959147ba6b | ppp | 2025-05-16 21:39 | triggered | | | none
+- [ ] | 36fef1fbef | neww | 2025-05-16 21:42 | triggered | | none

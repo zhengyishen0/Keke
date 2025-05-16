@@ -17,7 +17,7 @@ import threading
 import sys
 import platform
 from typing import List, Dict, Optional, Union
-from config import REMINDERS_FILE_PATH, REMINDER_CHECK_INTERVAL
+from config import REMINDER_FILE_PATH, REMINDER_CHECK_INTERVAL
 
 
 # Define the reminder status types
@@ -119,7 +119,7 @@ class Reminder:
         return cls(reminder_id, title, description, due_datetime, status, tags)
 
 
-def load_reminders(file_path: str = REMINDERS_FILE_PATH) -> List[Reminder]:
+def load_reminders(file_path: str = REMINDER_FILE_PATH) -> List[Reminder]:
     """Load all reminders from the markdown file"""
     with open(file_path, "r") as f:
         content = f.read()
@@ -144,7 +144,7 @@ def load_reminders(file_path: str = REMINDERS_FILE_PATH) -> List[Reminder]:
     return reminders
 
 
-def save_reminders(reminders: List[Reminder], file_path: str = REMINDERS_FILE_PATH) -> None:
+def save_reminders(reminders: List[Reminder], file_path: str = REMINDER_FILE_PATH) -> None:
     """Save all reminders to the markdown file"""
     with open(file_path, "w") as f:
         f.write(
@@ -156,7 +156,7 @@ def save_reminders(reminders: List[Reminder], file_path: str = REMINDERS_FILE_PA
 def add_reminder(title: str, description: str = "",
                  due_datetime: Optional[Union[str, datetime.datetime]] = None,
                  tags: List[str] = None,
-                 file_path: str = REMINDERS_FILE_PATH) -> Reminder:
+                 file_path: str = REMINDER_FILE_PATH) -> Reminder:
     """
     Add a new reminder to the system
 
@@ -198,7 +198,7 @@ def add_reminder(title: str, description: str = "",
     return reminder
 
 
-def remove_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+def remove_reminder(reminder_id: str, file_path: str = REMINDER_FILE_PATH) -> bool:
     """
     Remove a reminder by ID
 
@@ -223,7 +223,7 @@ def remove_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> b
     return False
 
 
-def cancel_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+def cancel_reminder(reminder_id: str, file_path: str = REMINDER_FILE_PATH) -> bool:
     """
     Cancel a reminder by ID (mark as cancelled but keep it)
 
@@ -247,7 +247,7 @@ def cancel_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> b
     return False
 
 
-def complete_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+def complete_reminder(reminder_id: str, file_path: str = REMINDER_FILE_PATH) -> bool:
     """
     Mark a reminder as completed
 
@@ -273,7 +273,7 @@ def complete_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) ->
 
 def list_reminders(status_filter: Optional[str] = None,
                    tag_filter: Optional[str] = None,
-                   file_path: str = REMINDERS_FILE_PATH) -> List[Reminder]:
+                   file_path: str = REMINDER_FILE_PATH) -> List[Reminder]:
     """
     List reminders, optionally filtered by status or tag
 
@@ -303,7 +303,7 @@ def list_reminders(status_filter: Optional[str] = None,
 
 
 class ReminderManager:
-    def __init__(self, file_path: str = REMINDERS_FILE_PATH, check_interval: int = REMINDER_CHECK_INTERVAL):
+    def __init__(self, file_path: str = REMINDER_FILE_PATH, check_interval: int = REMINDER_CHECK_INTERVAL):
         self.file_path = file_path
         self.check_interval = check_interval
         self._ensure_file_exists()
