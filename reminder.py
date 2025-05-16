@@ -17,12 +17,10 @@ import threading
 import sys
 import platform
 from typing import List, Dict, Optional, Union
-from config import REMINDERS_FILE
+from config import REMINDERS_FILE_PATH, REMINDER_CHECK_INTERVAL
 
 
 # Define the reminder status types
-
-
 class ReminderStatus:
     """
     Enum for the status of a reminder\n
@@ -121,7 +119,7 @@ class Reminder:
         return cls(reminder_id, title, description, due_datetime, status, tags)
 
 
-def load_reminders(file_path: str = REMINDERS_FILE) -> List[Reminder]:
+def load_reminders(file_path: str = REMINDERS_FILE_PATH) -> List[Reminder]:
     """Load all reminders from the markdown file"""
     with open(file_path, "r") as f:
         content = f.read()
@@ -146,7 +144,7 @@ def load_reminders(file_path: str = REMINDERS_FILE) -> List[Reminder]:
     return reminders
 
 
-def save_reminders(reminders: List[Reminder], file_path: str = REMINDERS_FILE) -> None:
+def save_reminders(reminders: List[Reminder], file_path: str = REMINDERS_FILE_PATH) -> None:
     """Save all reminders to the markdown file"""
     with open(file_path, "w") as f:
         f.write(
@@ -158,8 +156,20 @@ def save_reminders(reminders: List[Reminder], file_path: str = REMINDERS_FILE) -
 def add_reminder(title: str, description: str = "",
                  due_datetime: Optional[Union[str, datetime.datetime]] = None,
                  tags: List[str] = None,
-                 file_path: str = REMINDERS_FILE) -> Reminder:
-    """Add a new reminder to the system"""
+                 file_path: str = REMINDERS_FILE_PATH) -> Reminder:
+    """
+    Add a new reminder to the system
+
+    Args:
+        title: str
+        description: str = ""
+        due_datetime: Optional[Union[str, datetime.datetime]] = None
+        tags: List[str] = None
+        file_path: str = REMINDERS_FILE_PATH
+
+    Returns:
+        Reminder: Reminder object
+    """
     # Load current reminders
     reminders = load_reminders(file_path)
 
@@ -188,8 +198,17 @@ def add_reminder(title: str, description: str = "",
     return reminder
 
 
-def remove_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool:
-    """Remove a reminder by ID"""
+def remove_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+    """
+    Remove a reminder by ID
+
+    Args:
+        reminder_id: str
+        file_path: str = REMINDERS_FILE_PATH
+
+    Returns:
+        bool
+    """
     reminders = load_reminders(file_path)
     original_count = len(reminders)
 
@@ -204,8 +223,17 @@ def remove_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool:
     return False
 
 
-def cancel_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool:
-    """Cancel a reminder by ID (mark as cancelled but keep it)"""
+def cancel_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+    """
+    Cancel a reminder by ID (mark as cancelled but keep it)
+
+    Args:
+        reminder_id: str
+        file_path: str = REMINDERS_FILE_PATH
+
+    Returns:
+        bool
+    """
     reminders = load_reminders(file_path)
 
     for reminder in reminders:
@@ -219,8 +247,17 @@ def cancel_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool:
     return False
 
 
-def complete_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool:
-    """Mark a reminder as completed"""
+def complete_reminder(reminder_id: str, file_path: str = REMINDERS_FILE_PATH) -> bool:
+    """
+    Mark a reminder as completed
+
+    Args:
+        reminder_id: str
+        file_path: str = REMINDERS_FILE_PATH
+
+    Returns:
+        bool
+    """
     reminders = load_reminders(file_path)
 
     for reminder in reminders:
@@ -236,8 +273,18 @@ def complete_reminder(reminder_id: str, file_path: str = REMINDERS_FILE) -> bool
 
 def list_reminders(status_filter: Optional[str] = None,
                    tag_filter: Optional[str] = None,
-                   file_path: str = REMINDERS_FILE) -> List[Reminder]:
-    """List reminders, optionally filtered by status or tag"""
+                   file_path: str = REMINDERS_FILE_PATH) -> List[Reminder]:
+    """
+    List reminders, optionally filtered by status or tag
+
+    Args:
+        status_filter: Optional[str] = None
+        tag_filter: Optional[str] = None
+        file_path: str = REMINDERS_FILE_PATH
+
+    Returns:
+        List[Reminder]
+    """
     reminders = load_reminders(file_path)
     filtered_reminders = reminders
 
@@ -256,8 +303,9 @@ def list_reminders(status_filter: Optional[str] = None,
 
 
 class ReminderManager:
-    def __init__(self, file_path: str = REMINDERS_FILE):
+    def __init__(self, file_path: str = REMINDERS_FILE_PATH, check_interval: int = REMINDER_CHECK_INTERVAL):
         self.file_path = file_path
+        self.check_interval = check_interval
         self._ensure_file_exists()
         self._monitor_thread = None
         self._stop_monitoring = threading.Event()
@@ -306,14 +354,8 @@ class ReminderManager:
                     reminder.due_datetime <= now):
 
                 self._show_notification(reminder)
-                # Ask if the reminder should be marked as completed
-                print(
-                    f"Do you want to mark reminder {reminder.id} as completed? (y/n)")
-                user_input = input().lower()
-                if user_input.startswith('y'):
-                    complete_reminder(reminder.id, self.file_path)
 
-    def start_monitoring(self, check_interval: int = 60) -> None:
+    def start(self) -> None:
         """Start monitoring reminders in a background thread"""
         if self._monitor_thread and self._monitor_thread.is_alive():
             print("Monitoring is already active")
@@ -323,7 +365,7 @@ class ReminderManager:
 
         def monitor_loop():
             print(
-                f"Monitoring reminders (checking every {check_interval} seconds)...")
+                f"Monitoring reminders (checking every {self.check_interval} seconds)...")
             while not self._stop_monitoring.is_set():
                 try:
                     # Check reminders directly from file
@@ -332,13 +374,13 @@ class ReminderManager:
                     print(f"Error while checking reminders: {e}")
 
                 # Sleep for the interval but be responsive to stop signals
-                self._stop_monitoring.wait(check_interval)
+                self._stop_monitoring.wait(self.check_interval)
 
         self._monitor_thread = threading.Thread(
             target=monitor_loop, daemon=True)
         self._monitor_thread.start()
 
-    def stop_monitoring(self) -> None:
+    def stop(self) -> None:
         """Stop the reminder monitoring thread"""
         if self._monitor_thread and self._monitor_thread.is_alive():
             self._stop_monitoring.set()
@@ -373,76 +415,117 @@ def print_help() -> None:
     print("      - Show this help message")
 
 
+def parse_add_args(args: str) -> tuple[str, str, Optional[Union[str, datetime.datetime]], List[str]]:
+    """Parse arguments for the add command.
+
+    Args:
+        args: The command arguments string
+
+    Returns:
+        tuple containing (title, description, due_datetime, tags)
+    """
+    title_parts = args.split(" ", 1)
+    title = title_parts[0]
+
+    # Check if there are more arguments
+    if len(title_parts) > 1:
+        # Try to parse due_datetime, description, and tags
+        remaining = title_parts[1].strip()
+
+        # Check for datetime format
+        due_datetime = None
+        datetime_match = re.search(
+            r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})', remaining)
+        if datetime_match:
+            due_datetime = datetime_match.group(1)
+            remaining = remaining.replace(due_datetime, "").strip()
+
+        # Check for tags
+        tags = []
+        tags_match = re.search(r'tags:([a-zA-Z0-9,]+)', remaining)
+        if tags_match:
+            tags_str = tags_match.group(1)
+            tags = [tag.strip() for tag in tags_str.split(',')]
+            remaining = remaining.replace(f"tags:{tags_str}", "").strip()
+
+        # The rest is the description
+        description = remaining if remaining else ""
+    else:
+        due_datetime = None
+        description = ""
+        tags = []
+
+    return title, description, due_datetime, tags
+
+
+def parse_list_args(args: str) -> tuple[Optional[str], Optional[str]]:
+    """Parse arguments for the list command.
+
+    Args:
+        args: The command arguments string
+
+    Returns:
+        tuple containing (status_filter, tag_filter)
+    """
+    status_filter = None
+    tag_filter = None
+
+    if args:
+        args_parts = args.split()
+        for arg in args_parts:
+            if arg.upper() in [ReminderStatus.PENDING, ReminderStatus.COMPLETED, ReminderStatus.CANCELLED]:
+                status_filter = arg.upper()
+            else:
+                tag_filter = arg
+
+    return status_filter, tag_filter
+
+
+def parse_command(command: str) -> tuple[str, str]:
+    """Parse the command string into command and arguments.
+
+    Args:
+        command: The full command string entered by user
+
+    Returns:
+        tuple containing (command, arguments)
+    """
+    if not command:
+        return "", ""
+
+    parts = command.split(maxsplit=1)
+    cmd = parts[0].lower()
+    args = parts[1] if len(parts) > 1 else ""
+
+    return cmd, args
+
+
 def main() -> None:
     """Main function to run the reminder system"""
     print("Welcome to the Reminder System!")
     print_help()
 
     manager = ReminderManager()
+    manager.start()
 
     while True:
         try:
             command = input("\nEnter command: ").strip()
+            cmd, args = parse_command(command)
 
-            if not command:
+            if not cmd:
                 continue
 
-            parts = command.split(maxsplit=1)
-            cmd = parts[0].lower()
-            args = parts[1] if len(parts) > 1 else ""
-
             if cmd == "add":
-                # Parse the add command arguments
-                title_parts = args.split(" ", 1)
-                title = title_parts[0]
-
-                # Check if there are more arguments
-                if len(title_parts) > 1:
-                    # Try to parse due_datetime, description, and tags
-                    remaining = title_parts[1].strip()
-
-                    # Check for datetime format
-                    due_datetime = None
-                    datetime_match = re.search(
-                        r'(\d{4}-\d{2}-\d{2} \d{2}:\d{2})', remaining)
-                    if datetime_match:
-                        due_datetime = datetime_match.group(1)
-                        remaining = remaining.replace(due_datetime, "").strip()
-
-                    # Check for tags
-                    tags = []
-                    tags_match = re.search(r'tags:([a-zA-Z0-9,]+)', remaining)
-                    if tags_match:
-                        tags_str = tags_match.group(1)
-                        tags = [tag.strip() for tag in tags_str.split(',')]
-                        remaining = remaining.replace(
-                            f"tags:{tags_str}", "").strip()
-
-                    # The rest is the description
-                    description = remaining if remaining else ""
-                else:
-                    due_datetime = None
-                    description = ""
-                    tags = []
-
+                title, description, due_datetime, tags = parse_add_args(args)
                 add_reminder(title, description, due_datetime, tags)
-
-            elif cmd == "list":
-                status_filter = None
-                tag_filter = None
-
-                if args:
-                    args_parts = args.split()
-                    for arg in args_parts:
-                        if arg.upper() in [ReminderStatus.PENDING, ReminderStatus.COMPLETED, ReminderStatus.CANCELLED]:
-                            status_filter = arg.upper()
-                        else:
-                            tag_filter = arg
-
-                list_reminders(status_filter, tag_filter)
 
             elif cmd == "complete":
                 complete_reminder(args)
+
+            elif cmd == "list":
+                status_filter, tag_filter = parse_list_args(args)
+                list_reminders(status_filter, tag_filter)
 
             elif cmd == "cancel":
                 cancel_reminder(args)
@@ -450,17 +533,8 @@ def main() -> None:
             elif cmd == "remove":
                 remove_reminder(args)
 
-            elif cmd == "monitor":
-                try:
-                    interval = int(args) if args else 60
-                    manager.start_monitoring(interval)
-                except ValueError:
-                    print(
-                        f"Invalid interval: {args}. Using default 60 seconds.")
-                    manager.start_monitoring(60)
-
             elif cmd == "stop":
-                manager.stop_monitoring()
+                manager.stop()
 
             elif cmd == "help":
                 print_help()
